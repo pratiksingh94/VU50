@@ -1,3 +1,9 @@
+import numpy as np
+import wave
+
+
+
+
 def build_frame(text: str):
     payload = text.encode("ascii")
     
@@ -39,3 +45,34 @@ def build_bit_sequence(frame: bytes):
     frame_bits = bytes_to_bits(frame)
 
     return preamble + sync_bits + frame_bits
+
+
+
+SAMPLE_RATE = 44100
+BUAD_RATE = 50
+FREQ_ZERO = 1200
+FREQ_ONE = 2200
+
+
+def bits_to_audio(bits: list[int], sample_rate: int = SAMPLE_RATE, baud: int = BUAD_RATE):
+    samples_per_bit = int(sample_rate / baud)
+    t_bit = np.arange(samples_per_bit) / sample_rate
+
+    tone_zero = np.sin(2 * np.pi * FREQ_ZERO * t_bit)
+    tone_one = np.sin(2 * np.pi * FREQ_ONE * t_bit)
+
+    chunks = [tone_one if bit else tone_zero for bit in bits]
+    audio = np.concatenate(chunks).astype(np.float32)
+    return audio
+
+
+
+def save_wav(audio: "np.ndarray", path: str, sample_rate: int = SAMPLE_RATE):
+    clipped = np.clip(audio, -1.0, 1.0)
+    pcm = (clipped * 32767).astype(np.int16)
+
+    with wave.open(path, "w") as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(sample_rate)
+        f.writeframes(pcm.tobytes())
