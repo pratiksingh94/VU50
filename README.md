@@ -9,4 +9,5 @@ my own little digital mode
 preamble: simple alternating tone
 structure: [preamble][sync byte][1-byte length N][N payload bytes][1-byte checksum]
 sample rate: 44100 Hz
+modulation technique: BFSK (0 = 1200 Hz, 1 = 2200 Hz)
 ```
