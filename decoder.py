@@ -92,3 +92,93 @@ def find_preamble_and_decode(audio: "np.ndarray", sample_rate: int, baud: int, p
 
     data_start = sync_start + len(SYNC_BITS)
     return best_bits[data_start:]
+
+
+
+
+
+
+def bits_to_bytes(bits: list[int]):
+    complete_byte_count = len(bits) // 8
+    out = bytearray()
+
+    for i in range(complete_byte_count):
+        byte_bits = bits[i * 8 : (i+1)*8]
+        byte = 0
+        for bit in byte_bits:
+            byte = (byte << 1) | bit
+
+        out.append(byte)
+    
+    return bytes(out)
+
+
+def parse_frames(frame: bytes):
+    if len(frame) < 2:
+        raise ValueError("frame too short to container length and checksum")
+    
+    length = frame[0]
+    payload = frame[1:1+length]
+    recv_checksum = frame[1+length]
+
+    if len(payload) != length:
+        raise ValueError(f"frame truncated: expected {length} bytes received {len(payload)} bytes")
+    
+    computed_checksum = 0
+    for b in payload:
+        computed_checksum ^= b
+    
+    if computed_checksum != recv_checksum:
+        raise ValueError("checksum mismatch: computed {computed_checksum:#04x}, received checksum {recv_checksum:#04x}")
+    
+    return payload.decode("ascii")
+
+
+
+def decode(audio: "np.ndarray", sample_rate: int, baud: int):
+    frame_bits = find_preamble_and_decode(audio, sample_rate, baud)
+
+    if frame_bits is None:
+        raise ValueError("no preamble/sync found in audio")
+    
+    frame_bytes = bits_to_bytes(frame_bits)
+    return parse_frames(frame_bytes)
+
+
+
+
+
+##########
+def debug_audio(audio, sample_rate, baud, sub_bit_search=8):
+    print("audio properties")
+    print("dtype:", audio.dtype)
+    print("shape:", audio.shape)
+    print("min max:", audio.min(), audio.max())
+    print("")
+
+    samples_per_bit = int(sample_rate / baud)
+    step = max(1, samples_per_bit // sub_bit_search)
+    expected = [i % 2 for i in range(PREAMBLE_BIT_COUNT)]
+
+    best_score = -1
+    best_offset = None
+    best_start = None
+
+    for offset in range(0, samples_per_bit, step):
+        bits = audio_to_bits(audio[offset:], sample_rate, baud)
+        for start in range(0, max(0, len(bits) - PREAMBLE_BIT_COUNT + 1)):
+            score = score_preamble(bits[start:start + PREAMBLE_BIT_COUNT], expected)
+            if score > best_score:
+                best_score = score
+                best_offset = offset
+                best_start = start
+
+    print("preamble search")
+    print("best score:", {best_score})
+    print("threshold:", {PREAMBLE_BIT_COUNT*0.9})
+    
+    if best_score < PREAMBLE_BIT_COUNT * 0.9:
+        print("no window scored high enough")
+    else:
+        print("high score")
+
