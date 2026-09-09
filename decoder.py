@@ -129,7 +129,7 @@ def parse_frames(frame: bytes):
         computed_checksum ^= b
     
     if computed_checksum != recv_checksum:
-        raise ValueError("checksum mismatch: computed {computed_checksum:#04x}, received checksum {recv_checksum:#04x}")
+        raise ValueError(f"checksum mismatch: computed {computed_checksum:#04x}, received checksum {recv_checksum:#04x}")
     
     return payload.decode("ascii")
 
