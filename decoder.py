@@ -1,4 +1,5 @@
 import numpy as np
+import wave
 
 def goertzel_magnitude(samples: "np.ndarray", target_freq: float, sample_rate: int):
     n = len(samples)
@@ -143,6 +144,35 @@ def decode(audio: "np.ndarray", sample_rate: int, baud: int):
     
     frame_bytes = bits_to_bytes(frame_bits)
     return parse_frames(frame_bytes)
+
+
+
+def load_wav(path: str):
+    with wave.open(path, "rb") as w:
+        channels = w.getnchannels()
+        sample_width = w.getsampwidth()
+        sample_rate = w.getframerate()
+        raw = w.readframes(w.getnframes())
+
+    if sample_width == 1:
+        audio = np.frombuffer(raw, dtype=np.uint8).astype(np.float32)
+        audio = (audio - 128.0) / 128.0
+    elif sample_width == 2:
+        audio = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+    elif sample_width == 4:
+        audio = np.frombuffer(raw, dtype=np.int32).astype(np.float32) / 2147483648.0
+    else:
+        raise ValueError(f"unsupported sample width: {sample_width} bytes")
+    
+    if channels > 1:
+        audio = audio.reshape(-1, channels).mean(axis=1).astype(np.float32)
+    
+    return audio, sample_rate
+
+
+def decode_wav_file(path: str, baud: int):
+    audio, sample_rate = load_wav(path)
+    return decode(audio, sample_rate, baud)
 
 
 
