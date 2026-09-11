@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VU50 | Amateur Digital Mode</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#17191C',
+                        panel: '#212429',
+                        border: '#2A2E33',
+                        borderLight: '#34383E',
+                        textDim: '#8B8F96',
+                        amber: '#FFB020',
+                        cyan: '#5FD8E0',
+                        red: '#FF5D5D',
+                        green: '#6BFF9E',
+                    },
+                    fontFamily: {
+                        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="bg-bg text-[#E7E6E2] font-mono min-h-screen px-5 py-8">
+    <div class="max-w-[930px] mx-auto">
+        <div class="flex items-baseline gap-4 flex-wrap pb-5 mb-7 border-b border-border">
+            <h1 class="font-mono text-[28px] font-semibold tracking-wide m-0">VU50</h1>
+            <span class="font-mono text-[13px] text-textDim">FSK | 1200/2200 Hz | 50 buad | Amateur Digital Mode | </span> <span><a href="https://github.com/pratiksingh94/VU50" class="text-primary text-mono text-[13px] underline" target="_blank">GitHub</a></span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+            <!-- ENCODINGGGGGGGG -->
+             <div class="bg-panel border border-border rounded-md p-6 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <span class="font-mono text-[13px] font-semibold tracking-widest text-amber">ENCODE</span>
+                    <!-- <span id="tx-led" class="w-2 h-2 rounded-full bg-borderLight transition-all"></span> -->
+                </div>
+
+
+                <div>
+                    <label for="tx-text" class="text-[13px] text-textDim block mb-1.5">Message</label>
+                    <textarea id="tx-text" maxlength="255" placeholder="CQ CQ DE VU3WTF" class="w-full min-h-[72px] bg-bg border border-borderLight rounded text-[#E7E6E2] text-sm px-3 py-2.5 resize-y focus:outline focus:outline-2 focus:outline-amber focus:outline-offset-1"></textarea>
+                </div>
+
+                <button id="tx-btn" class="bg-amber border border-amber text-[#1A1200] font-medium text-sm rounded px-4 py-2.5 hover:bg-[#FFC04D] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    Generate Audio
+                </button>
+
+                <div id="tx-output" class="hidden">
+                    <label class="text-[13px] text-textDim block mb-1.5">Output</label>
+                    <audio id="tx-audio" controls class="w-full h-8"></audio>
+                    <a id="tx-download" class="font-mono text-[13px] text-amber inline-block mt-2" download="VU50_message.wav">Download .wav</a>
+                </div>
+
+                <p class="text-xs text-textDim leading-relaxed">Play this through a speaker into a radio mic to transmit for real, or you can use it directly on the DECODE panel to test.</p>
+             </div>
+
+
+
+             <!-- DECODEEE  -->
+
+             <div class="bg-panel border border-border rounded-md p-6 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <span class="font-mono text-[13px] font-semibold tracking-widest text-cyan">DECODE</span>
+                    <!-- <span id="rx-led" class="w-2 h-2 rounded-full bg-borderLight transition-all"></span> -->
+                </div>
+
+                <div>
+                    <label for="rx-file" class="text-[13px] text-textDim block mb-1.5">Audio file (.wav)</label>
+                    <input type="file" id="rx-file" accept="audio/wav,audio/x-wav,.wav" class=" cursor-pointer w-full bg-bg border border-borderLight rounded text-[#E7E6E2] text-sm px-3 py-2.5 focus:outline focus:outline-2 focus:outline-cyan focus:outline-offset-1 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:bg-borderLight file:text-[#E7E6E2] file:text-xs">
+                </div>
+
+                <button id="rx-btn" class="bg-cyan border border-cyan text-[#0A2224] font-medium text-sm rounded px-4 py-2.5 hover:bg-[#7FE3EA] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">Decode</button>
+
+
+                <div>
+                    <label class="text-[13px] text-textDim block mb-1.5">Recovered text</label>
+                    <div id="rx-readout" class="font-mono text-sm bg-bg border border-borderLight rounded p-3 min-h-[44px] whitespace-pre-wrap break-words text-textDim">-- candy is bad --</div>
+                </div>
+
+
+                <p class="text-xs text-textDim leading-relaxed">Works on a downloaded VU50 audio, or a real recording (speaker played into mic and recorded back)</p>
+             </div>
+
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>

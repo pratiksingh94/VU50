@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, render_template
 import os
 import tempfile
 import io
@@ -10,6 +10,11 @@ from encoder import build_frame, build_bit_sequence, bits_to_audio
 from decoder import decode_wav_file
 
 app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
 
 @app.route("/test")
 def test():
@@ -72,4 +77,4 @@ def decode():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=6767)
+    app.run(host="0.0.0.0", port=6767, debug=True)
