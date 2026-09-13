@@ -6,8 +6,8 @@ import wave
 import numpy as np
 
 
-from encoder import build_frame, build_bit_sequence, bits_to_audio
-from decoder import decode_wav_file
+from encoder import build_frame, build_bit_sequence, bits_to_audio, BUAD_RATE
+from decoder import decode_wav_file, ChecksumError
 
 app = Flask(__name__)
 
@@ -66,8 +66,14 @@ def decode():
         tmp_path = tmp.name
     
     try:
-        text = decode_wav_file(tmp_path, baud=50)
+        text = decode_wav_file(tmp_path, BUAD_RATE)
         return { "text": text }
+    except ChecksumError as e:
+        return {
+            "checksum_failed": True,
+            "error": str(e),
+            "partial_text": e.partial_text
+        }, 422
     except ValueError as e:
         return {"error": str(e)}, 422
     except Exception as e:

@@ -1,6 +1,8 @@
 import numpy as np
 import wave
 
+from protocol import crc8, FIXED_FRAME_BYTES, REPEAT_COUNT
+
 def goertzel_magnitude(samples: "np.ndarray", target_freq: float, sample_rate: int):
     n = len(samples)
     k = int(0.5 + (n * target_freq) / sample_rate)
@@ -114,6 +116,15 @@ def bits_to_bytes(bits: list[int]):
     return bytes(out)
 
 
+
+
+class ChecksumError(ValueError):
+    def __init__(self, message: str, partial_text:str):
+        super().__init__(message)
+        self.partial_text = partial_text
+
+
+
 def parse_frames(frame: bytes):
     if len(frame) < 2:
         raise ValueError("frame too short to container length and checksum")
@@ -125,23 +136,62 @@ def parse_frames(frame: bytes):
     if len(payload) != length:
         raise ValueError(f"frame truncated: expected {length} bytes received {len(payload)} bytes")
     
-    computed_checksum = 0
-    for b in payload:
-        computed_checksum ^= b
+    computed_checksum = crc8(payload)
+    # for b in payload:
+    #     computed_checksum ^= b
     
     if computed_checksum != recv_checksum:
-        raise ValueError(f"checksum mismatch: computed {computed_checksum:#04x}, received checksum {recv_checksum:#04x}")
+        partial_text = payload.decode("ascii", errors="replace")
+        raise ChecksumError(f"checksum mismatch: computed {computed_checksum:#04x}, received checksum {recv_checksum:#04x}", partial_text)
     
     return payload.decode("ascii")
 
 
 
-def decode(audio: "np.ndarray", sample_rate: int, baud: int):
-    frame_bits = find_preamble_and_decode(audio, sample_rate, baud)
+def preprocess(audio: "np.ndarray"):
+    audio = audio - np.mean(audio)
+    peak = np.max(np.abs(audio))
+    if peak > 1e-6:
+        audio = audio / peak * 0.9
 
-    if frame_bits is None:
+    return audio.astype(np.float32)
+
+
+
+
+def majority_vote_bit(copies: "list[list[int]]"):
+    n = len(copies)
+    length = len(copies[0])
+    result = []
+
+    for i in range(length):
+        ones = sum(copy[i] for copy in copies)
+        result.append(1 if ones > n / 2 else 0)
+
+    return result
+
+
+
+def decode(audio: "np.ndarray", sample_rate: int, baud: int):
+    audio = preprocess(audio)
+    raw_bits = find_preamble_and_decode(audio, sample_rate, baud)
+
+    if raw_bits is None:
         raise ValueError("no preamble/sync found in audio")
     
+    copy_bit_length = FIXED_FRAME_BYTES * 8
+    required_bits = copy_bit_length * REPEAT_COUNT
+
+    if len(raw_bits) < required_bits:
+        raise ValueError(f"not enough bits recovered for {REPEAT_COUNT}x repeated frame (got {len(raw_bits)} need {required_bits})")
+    
+    repeated_region = raw_bits[:required_bits]
+    copies = [
+        repeated_region[i * copy_bit_length : (i + 1) * copy_bit_length]
+        for i in range(REPEAT_COUNT)
+    ]
+
+    frame_bits = majority_vote_bit(copies)
     frame_bytes = bits_to_bytes(frame_bits)
     return parse_frames(frame_bytes)
 

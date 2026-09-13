@@ -1,22 +1,23 @@
 import numpy as np
 import wave
 
-
+from protocol import crc8, FIXED_FRAME_BYTES, REPEAT_COUNT
 
 
 def build_frame(text: str):
     payload = text.encode("ascii")
     
-    if len(payload) > 255:
-        raise ValueError(f"payload too long: {len(payload)} bytes (max 255)")
+    max_payload = FIXED_FRAME_BYTES - 2
+    if len(payload) > max_payload:
+        raise ValueError(f"payload too long: {len(payload)} bytes (max {max_payload} per frame)")
     
     length_byte = bytes([len(payload)])
-    checksum = 0
+    # checksum = 0
 
-    for b in payload:
-        checksum ^= b
+    # for b in payload:
+    #     checksum ^= b
     
-    checksum_byte = bytes([checksum])
+    checksum_byte = bytes([crc8(payload)])
     return length_byte + payload + checksum_byte
 
 
@@ -24,6 +25,7 @@ def build_frame(text: str):
 
 PREAMBLE_BIT_COUNT = 20
 SYNC_BYTE = 0b01111110
+TRAILING_PADDING_BIT_COUNT = 12
 
 def byte_to_bits(byte: int):
     return [(byte >> shift) & 1 for shift in range(7, -1, -1)]
@@ -40,11 +42,20 @@ def build_preamble(bit_count: int = PREAMBLE_BIT_COUNT):
 
 
 def build_bit_sequence(frame: bytes):
-    preamble = build_preamble(PREAMBLE_BIT_COUNT)
-    sync_bits = byte_to_bits(SYNC_BYTE)
-    frame_bits = bytes_to_bits(frame)
+    if len(frame) > FIXED_FRAME_BYTES:
+        raise ValueError(f"frame too long ({len(frame)} bytes) for fixed frame size ({FIXED_FRAME_BYTES} bytes), shorten your message")
 
-    return preamble + sync_bits + frame_bits
+    preamble = build_preamble()
+    sync_bits = byte_to_bits(SYNC_BYTE)
+
+    padding_byte = bytes(FIXED_FRAME_BYTES - len(frame))
+    padded_frame = frame + padding_byte
+    padded_frame_bits = bytes_to_bits(padded_frame)
+    # print(padded_frame)
+    repeated_bits = padded_frame_bits * REPEAT_COUNT
+
+    trailing_padding = build_preamble(TRAILING_PADDING_BIT_COUNT)
+    return preamble + sync_bits + repeated_bits + trailing_padding
 
 
 
